@@ -7,15 +7,19 @@ import {
   TextField, 
   Pagination, 
   Box,
-  Container
+  Container,
+  Checkbox,
+  IconButton
 } from "@mui/material";
+import { Delete as DeleteIcon } from "@mui/icons-material";
 import { Product, ProductData } from '../types/types';
-import { getProducts } from "../services/ProductService";
-import { toastError } from "../utils/toast";
+import { deleteProducts, getProducts, } from "../services/ProductService";
+import { toastError, toastSuccess } from "../utils/toast";
 import debounce from 'lodash/debounce';
 
 const Home = () => {
   const [products, setProducts] = useState<ProductData[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
@@ -38,7 +42,6 @@ const Home = () => {
     }
   };
 
-  // Debounce search to avoid too many API calls
   const debouncedSearch = debounce((searchQuery: string) => {
     setPage(1);
     fetchProducts(1, searchQuery);
@@ -58,9 +61,35 @@ const Home = () => {
     setPage(value);
   };
 
+  const handleSelectProduct = (productId: string) => {
+    setSelectedProducts((prevSelected) =>
+      prevSelected.includes(productId)
+        ? prevSelected.filter((id) => id !== productId) 
+        : [...prevSelected, productId] 
+    );
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedProducts.length === 0) {
+      toastError("Please select at least one product to delete");
+      return;
+    }
+
+    try {
+      await deleteProducts(selectedProducts);
+      toastSuccess("Selected products deleted successfully");
+      setProducts((prev) => prev.filter((product) => !selectedProducts.includes(product._id)));
+      setSelectedProducts([]); 
+    } catch (error: any) {
+      toastError(error.message || "Failed to delete products");
+    }
+  };
+  console.log(selectedProducts, 'selected products');
+  
+
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Box sx={{ mb: 4 }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 4 }}>
         <TextField
           fullWidth
           label="Search Products"
@@ -69,6 +98,12 @@ const Home = () => {
           onChange={handleSearchChange}
           sx={{ mb: 3 }}
         />
+
+        {selectedProducts.length > 0 && (
+          <IconButton color="error" onClick={handleDeleteSelected} sx={{ height: "56px", ml: 2 }}>
+            <DeleteIcon />
+          </IconButton>
+        )}
       </Box>
 
       {loading ? (
@@ -76,10 +111,15 @@ const Home = () => {
       ) : (
         <>
           <Grid container spacing={3}>
-            {products.map((product, index) => (
-              <Grid item xs={12} sm={6} md={3} key={index}>
-                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            {products.map((product) => (
+              <Grid item xs={12} sm={6} md={3} key={product._id}>
+                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
                   <CardContent>
+                    <Checkbox
+                      checked={selectedProducts.includes(product._id)}
+                      onChange={() => handleSelectProduct(product._id)}
+                      sx={{ position: "absolute", top: 5, right: 5 }}
+                    />
                     <Typography gutterBottom variant="h5" component="div">
                       {product.productName}
                     </Typography>

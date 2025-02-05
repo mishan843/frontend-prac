@@ -35,3 +35,13 @@ export const getProducts = async (params: SearchParams): Promise<ProductResponse
         throw new Error(err.response?.data?.message || 'Failed to fetch products');
     }
 };
+
+export const deleteProducts = async (productIds: string[]): Promise<void> => {
+    try {
+        await api.delete('/product/delete-bulk', { data: { productIds } });
+    } catch (error) {
+        const err = error as AxiosError<ApiError>;
+        throw new Error(err.response?.data?.message || "Failed to delete products");
+    }
+};
+
